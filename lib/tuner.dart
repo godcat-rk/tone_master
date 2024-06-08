@@ -21,7 +21,7 @@ class _TunerScreenState extends State<TunerScreen> {
       codec: Codec.pcm16,
       toStream: (data) {
         setState(() {
-          _samples = data.cast<double>();
+          _samples = data.cast<double>(); // Convert List<int> to List<double>
         });
       },
     );
