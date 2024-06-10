@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
-import 'tuner.dart';
+import 'package:tone_master/tuner.dart';
 
-void main() => runApp(MyApp());
+void main() => runApp(new AudioStreamingApp());
 
-class MyApp extends StatelessWidget {
+class AudioStreamingApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ToneMaster',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: TunerScreen(),
+      home: Tuner(),
     );
   }
 }

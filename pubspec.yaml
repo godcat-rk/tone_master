@@ -12,7 +12,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_sound: ^9.4.18
+  flutter_sound: ^9.2.13
+  permission_handler: ^11.2.0
+  audio_streamer: ^4.1.1
+  fftea: ^1.5.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -21,7 +24,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_sound: ^9.4.18
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
