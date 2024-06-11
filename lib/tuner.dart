@@ -17,6 +17,7 @@ class TunerState extends State<Tuner> {
   List<double>? latestBuffer;
   double? recordingTime;
   StreamSubscription<List<double>>? audioSubscription;
+  double? detectedFrequency;
 
   /// Check if microphone permission is granted.
   Future<bool> checkPermission() async => await Permission.microphone.isGranted;
@@ -43,10 +44,12 @@ class TunerState extends State<Tuner> {
 
     print('Detected frequency: $frequency Hz');
 
-    setState(() => latestBuffer = buffer);
+    setState(() {
+      latestBuffer = buffer;
+      detectedFrequency = frequency;
+    });
   }
 
-  /// Call-back on error.
   void handleError(Object error) {
     setState(() => isRecording = false);
     print(error);
@@ -54,18 +57,11 @@ class TunerState extends State<Tuner> {
 
   /// Start audio sampling.
   void start() async {
-    // Check permission to use the microphone.
-    //
-    // Remember to update the AndroidManifest file (Android) and the
-    // Info.plist and pod files (iOS).
     if (!(await checkPermission())) {
       await requestPermission();
     }
 
-    // Set the sampling rate - works only on Android.
     AudioStreamer().sampleRate = 22100;
-
-    // Start listening to the audio stream.
     audioSubscription = AudioStreamer().audioStream.listen(onAudio, onError: handleError);
 
     setState(() => isRecording = true);
@@ -91,6 +87,7 @@ class TunerState extends State<Tuner> {
                 Text(''),
                 Text('Max amp: ${latestBuffer?.reduce(max)}'),
                 Text('Min amp: ${latestBuffer?.reduce(min)}'),
+                Text('Detected frequency: ${detectedFrequency?.toStringAsFixed(2)} Hz'),
                 Text('${recordingTime?.toStringAsFixed(2)} seconds recorded.'),
               ])),
         ])),
