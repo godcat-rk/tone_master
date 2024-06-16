@@ -33,9 +33,13 @@ class TunerState extends State<Tuner> {
     sampleRate ??= await AudioStreamer().actualSampleRate;
     recordingTime = audio.length / sampleRate!;
 
+    // ウィンドウ関数を適用
+    final window = Window.hanning(buffer.length);
+    final windowedBuffer = List<double>.generate(buffer.length, (i) => buffer[i] * window[i]);
+
     // FFTを実行して周波数スペクトルを取得
-    final fft = FFT(buffer.length);
-    final freq = fft.realFft(buffer);
+    final fft = FFT(windowedBuffer.length);
+    final freq = fft.realFft(windowedBuffer);
     final magnitudes = freq.discardConjugates().magnitudes();
 
     // 最大振幅の周波数成分を取得
@@ -61,7 +65,7 @@ class TunerState extends State<Tuner> {
       await requestPermission();
     }
 
-    AudioStreamer().sampleRate = 22100;
+    AudioStreamer().sampleRate = 44100;
     audioSubscription = AudioStreamer().audioStream.listen(onAudio, onError: handleError);
 
     setState(() => isRecording = true);
