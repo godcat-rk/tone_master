@@ -7,7 +7,7 @@ import 'package:fftea/fftea.dart';
 
 class Tuner extends StatefulWidget {
   @override
-  TunerState createState() => new TunerState();
+  TunerState createState() => TunerState();
 }
 
 class TunerState extends State<Tuner> {
