@@ -18,6 +18,17 @@ class TunerState extends State<Tuner> {
   double? recordingTime;
   StreamSubscription<List<double>>? audioSubscription;
   double? detectedFrequency;
+  String? detectedNote;
+
+  // 追加: 周波数をドイツ音名に変換する関数
+  String frequencyToNoteName(double frequency) {
+    List<String> noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    double a4 = 440.0;
+    int noteNumber = (12 * (log(frequency / a4) / log(2))).round() + 57; // 57 is the MIDI number for A4
+    int octave = (noteNumber / 12).floor() - 1;
+    String noteName = noteNames[noteNumber % 12];
+    return "$noteName$octave";
+  }
 
   /// Check if microphone permission is granted.
   Future<bool> checkPermission() async => await Permission.microphone.isGranted;
@@ -46,11 +57,23 @@ class TunerState extends State<Tuner> {
     int maxIndex = magnitudes.indexOf(magnitudes.reduce(max));
     double frequency = maxIndex * sampleRate! / buffer.length;
 
-    print('Detected frequency: $frequency Hz');
+    // // 倍音を取得 とりあえず現状不要なので追加実装用に残しておく
+    // List<double> harmonics = [];
+    // for (int i = 1; i <= 5; i++) {
+    //   // 上位5つの倍音を取得
+    //   int harmonicIndex = (maxIndex * i);
+    //   if (harmonicIndex < magnitudes.length) {
+    //     double harmonicFrequency = harmonicIndex * sampleRate! / buffer.length;
+    //     harmonics.add(harmonicFrequency);
+    //   }
+    // }
+    // print('Detected frequency: $frequency Hz');
+    // print('Harmonics: $harmonics');
 
     setState(() {
       latestBuffer = buffer;
       detectedFrequency = frequency;
+      detectedNote = frequencyToNoteName(frequency); // 追加: 検出された音名を保存
     });
   }
 
@@ -65,7 +88,7 @@ class TunerState extends State<Tuner> {
       await requestPermission();
     }
 
-    AudioStreamer().sampleRate = 44100;
+    AudioStreamer().sampleRate = 58000;
     audioSubscription = AudioStreamer().audioStream.listen(onAudio, onError: handleError);
 
     setState(() => isRecording = true);
@@ -92,6 +115,7 @@ class TunerState extends State<Tuner> {
                 Text('Max amp: ${latestBuffer?.reduce(max)}'),
                 Text('Min amp: ${latestBuffer?.reduce(min)}'),
                 Text('Detected frequency: ${detectedFrequency?.toStringAsFixed(2)} Hz'),
+                Text('Detected note: ${detectedNote ?? ""}'),
                 Text('${recordingTime?.toStringAsFixed(2)} seconds recorded.'),
               ])),
         ])),
