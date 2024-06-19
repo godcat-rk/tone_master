@@ -19,6 +19,7 @@ class TunerState extends State<Tuner> {
   StreamSubscription<List<double>>? audioSubscription;
   double? detectedFrequency;
   String? detectedNote;
+  Map<String, double>? octaveFrequencies;
 
   // 追加: 周波数をドイツ音名に変換する関数
   String frequencyToNoteName(double frequency) {
@@ -30,11 +31,30 @@ class TunerState extends State<Tuner> {
     return "$noteName$octave";
   }
 
+  Map<String, double> calculateOctaveFrequencies(double baseFrequency) {
+    List<String> noteNames = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"];
+    Map<String, double> frequencies = {};
+
+    for (int i = 0; i < noteNames.length; i++) {
+      double frequency = baseFrequency * pow(2, i / 12);
+      frequencies[noteNames[i]] = frequency;
+    }
+
+    return frequencies;
+  }
+
   /// Check if microphone permission is granted.
   Future<bool> checkPermission() async => await Permission.microphone.isGranted;
 
   /// Request the microphone permission.
   Future<void> requestPermission() async => await Permission.microphone.request();
+
+  @override
+  void initState() {
+    super.initState();
+    octaveFrequencies = calculateOctaveFrequencies(440.0); // A=440Hzを基準にする例
+    print(octaveFrequencies);
+  }
 
   /// Call-back on audio sample.
   void onAudio(List<double> buffer) async {
