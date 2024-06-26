@@ -20,27 +20,32 @@ class TunerState extends State<Tuner> {
   double? detectedFrequency;
   String? detectedNote;
   Map<String, double>? octaveFrequencies;
+  Map<String, List<double>>? noteRanges;
 
   // 追加: 周波数をドイツ音名に変換する関数
   String frequencyToNoteName(double frequency) {
     List<String> noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     double a4 = 440.0;
-    int noteNumber = (12 * (log(frequency / a4) / log(2))).round() + 57; // 57 is the MIDI number for A4
+    int noteNumber = (12 * (log(frequency / a4) / log(2))).round() + 57;
     int octave = (noteNumber / 12).floor() - 1;
     String noteName = noteNames[noteNumber % 12];
     return "$noteName$octave";
   }
 
-  Map<String, double> calculateOctaveFrequencies(double baseFrequency) {
+  Map<String, List<double>> calculateNoteRanges(double baseFrequency) {
     List<String> noteNames = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"];
-    Map<String, double> frequencies = {};
+    Map<String, List<double>> ranges = {};
 
-    for (int i = 0; i < noteNames.length; i++) {
-      double frequency = baseFrequency * pow(2, i / 12);
-      frequencies[noteNames[i]] = frequency;
+    for (int octave = 0; octave <= 8; octave++) {
+      for (int i = 0; i < noteNames.length; i++) {
+        double frequency = baseFrequency * pow(2, (octave - 4) + i / 12);
+        double lowerBound = frequency / pow(2, 1 / 24);
+        double upperBound = frequency * pow(2, 1 / 24);
+        String noteNameWithOctave = '${noteNames[i]}${octave}';
+        ranges[noteNameWithOctave] = [lowerBound, upperBound];
+      }
     }
-
-    return frequencies;
+    return ranges;
   }
 
   /// Check if microphone permission is granted.
@@ -49,11 +54,25 @@ class TunerState extends State<Tuner> {
   /// Request the microphone permission.
   Future<void> requestPermission() async => await Permission.microphone.request();
 
+  void printFrequencyAndRange(double frequency, Map<String, List<double>> ranges) {
+    for (var entry in ranges.entries) {
+      String note = entry.key;
+      double lowerBound = entry.value[0];
+      double upperBound = entry.value[1];
+
+      if (frequency >= lowerBound && frequency <= upperBound) {
+        print('Frequency: $frequency Hz');
+        print('Note: $note, Range: min: $lowerBound, max: $upperBound');
+        return;
+      }
+    }
+    // print('Frequency: $frequency Hz is out of range!');
+  }
+
   @override
   void initState() {
     super.initState();
-    octaveFrequencies = calculateOctaveFrequencies(440.0); // A=440Hzを基準にする例
-    print(octaveFrequencies);
+    noteRanges = calculateNoteRanges(440.0); // A=440Hzを基準にする例
   }
 
   /// Call-back on audio sample.
@@ -76,6 +95,8 @@ class TunerState extends State<Tuner> {
     // 最大振幅の周波数成分を取得
     int maxIndex = magnitudes.indexOf(magnitudes.reduce(max));
     double frequency = maxIndex * sampleRate! / buffer.length;
+
+    printFrequencyAndRange(frequency, noteRanges!); // 追加: 検出された周波数と範囲を表示
 
     // // 倍音を取得 とりあえず現状不要なので追加実装用に残しておく
     // List<double> harmonics = [];
