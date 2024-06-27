@@ -5,6 +5,17 @@ import 'package:audio_streamer/audio_streamer.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:fftea/fftea.dart';
 
+// 音オブジェクト
+class NoteInfo {
+  final double frequency;
+  final String note;
+  final double lowerBound;
+  final double upperBound;
+  final double correctPitch;
+
+  NoteInfo(this.frequency, this.note, this.lowerBound, this.upperBound, this.correctPitch);
+}
+
 class Tuner extends StatefulWidget {
   @override
   TunerState createState() => TunerState();
@@ -18,19 +29,9 @@ class TunerState extends State<Tuner> {
   double? recordingTime;
   StreamSubscription<List<double>>? audioSubscription;
   double? detectedFrequency;
-  String? detectedNote;
   Map<String, double>? octaveFrequencies;
   Map<String, List<double>>? noteRanges;
-
-  // 追加: 周波数をドイツ音名に変換する関数
-  String frequencyToNoteName(double frequency) {
-    List<String> noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-    double a4 = 440.0;
-    int noteNumber = (12 * (log(frequency / a4) / log(2))).round() + 57;
-    int octave = (noteNumber / 12).floor() - 1;
-    String noteName = noteNames[noteNumber % 12];
-    return "$noteName$octave";
-  }
+  NoteInfo? detectedNoteInfo;
 
   Map<String, List<double>> calculateNoteRanges(double baseFrequency) {
     List<String> noteNames = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"];
@@ -54,19 +55,26 @@ class TunerState extends State<Tuner> {
   /// Request the microphone permission.
   Future<void> requestPermission() async => await Permission.microphone.request();
 
-  void printFrequencyAndRange(double frequency, Map<String, List<double>> ranges) {
+  NoteInfo? getNoteInfo(double frequency, Map<String, List<double>> ranges, double baseFrequency) {
     for (var entry in ranges.entries) {
       String note = entry.key;
       double lowerBound = entry.value[0];
       double upperBound = entry.value[1];
 
       if (frequency >= lowerBound && frequency <= upperBound) {
-        print('Frequency: $frequency Hz');
-        print('Note: $note, Range: min: $lowerBound, max: $upperBound');
-        return;
+        double correctPitch = getCorrectPitch(note, baseFrequency);
+        return NoteInfo(frequency, note, lowerBound, upperBound, correctPitch);
       }
     }
-    // print('Frequency: $frequency Hz is out of range!');
+    return null; // 該当する範囲がない場合はnullを返す
+  }
+
+  double getCorrectPitch(String note, double baseFrequency) {
+    List<String> noteNames = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"];
+    int octave = int.parse(note.substring(note.length - 1));
+    String noteWithoutOctave = note.substring(0, note.length - 1);
+    int n = noteNames.indexOf(noteWithoutOctave) - noteNames.indexOf("A") + (octave - 4) * 12;
+    return baseFrequency * pow(2, n / 12);
   }
 
   @override
@@ -96,7 +104,7 @@ class TunerState extends State<Tuner> {
     int maxIndex = magnitudes.indexOf(magnitudes.reduce(max));
     double frequency = maxIndex * sampleRate! / buffer.length;
 
-    printFrequencyAndRange(frequency, noteRanges!); // 追加: 検出された周波数と範囲を表示
+    NoteInfo? noteInfo = getNoteInfo(frequency, noteRanges!, 440.0); // 440Hzを基準とする
 
     // // 倍音を取得 とりあえず現状不要なので追加実装用に残しておく
     // List<double> harmonics = [];
@@ -114,7 +122,7 @@ class TunerState extends State<Tuner> {
     setState(() {
       latestBuffer = buffer;
       detectedFrequency = frequency;
-      detectedNote = frequencyToNoteName(frequency); // 追加: 検出された音名を保存
+      detectedNoteInfo = noteInfo;
     });
   }
 
@@ -153,11 +161,19 @@ class TunerState extends State<Tuner> {
                   margin: EdgeInsets.only(top: 20),
                 ),
                 Text(''),
+                Text('TUNER INFO:'),
+                Text('Detected frequency: ${detectedFrequency?.toStringAsFixed(2)} Hz'),
+                if (detectedNoteInfo != null) ...[
+                  Text('Note: ${detectedNoteInfo!.note}'),
+                  Text('Correct Pitch: ${detectedNoteInfo!.correctPitch} Hz'),
+                  Text('min: ${detectedNoteInfo!.lowerBound}'),
+                  Text('max: ${detectedNoteInfo!.upperBound}')
+                ],
+                Text(''),
+                Text('MIC INFO:'),
+                Text('${recordingTime?.toStringAsFixed(2)} seconds recorded.'),
                 Text('Max amp: ${latestBuffer?.reduce(max)}'),
                 Text('Min amp: ${latestBuffer?.reduce(min)}'),
-                Text('Detected frequency: ${detectedFrequency?.toStringAsFixed(2)} Hz'),
-                Text('Detected note: ${detectedNote ?? ""}'),
-                Text('${recordingTime?.toStringAsFixed(2)} seconds recorded.'),
               ])),
         ])),
         floatingActionButton: FloatingActionButton(
