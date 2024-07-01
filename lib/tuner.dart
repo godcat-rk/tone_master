@@ -102,7 +102,14 @@ class TunerState extends State<Tuner> {
 
     // 最大振幅の周波数成分を取得
     int maxIndex = magnitudes.indexOf(magnitudes.reduce(max));
-    double frequency = maxIndex * sampleRate! / buffer.length;
+    double y0 = magnitudes[maxIndex - 1];
+    double y1 = magnitudes[maxIndex];
+    double y2 = magnitudes[maxIndex + 1];
+
+    // パラボリックインターポレーションによるピークの位置補正
+    double delta = 0.5 * ((y0 - y2) / (y0 - 2 * y1 + y2));
+    double frequency = (maxIndex + delta) * sampleRate! / windowedBuffer.length;
+    print('Detected frequency: $frequency Hz');
 
     NoteInfo? noteInfo = getNoteInfo(frequency, noteRanges!, 440.0); // 440Hzを基準とする
 
